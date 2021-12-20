@@ -1,8 +1,5 @@
-﻿using System;
-using System.Threading.Tasks;
-using Hangfire;
-using Hangfire.PostgreSql;
-using Microsoft.Extensions.DependencyInjection;
+﻿using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 
 namespace Hangfire.Server
@@ -11,22 +8,22 @@ namespace Hangfire.Server
     {
         static async Task Main(string[] args)
         {
-            GlobalConfiguration.Configuration.UsePostgreSqlStorage("Server=postgresql;Port=5432;Database=demo;User Id=demo; Password=111111;");
-
+            var connString = "localhost:6379";
             var hostBuilder = new HostBuilder()
-                // Add configuration, logging, ...
+                .ConfigureLogging(l => { })
                 .ConfigureServices((hostContext, services) =>
                 {
-                    // Add your services for depedency injection.
+                    connString = hostContext.Configuration.GetConnectionString("Redis");
                 });
 
-            using (var server = new BackgroundJobServer(new BackgroundJobServerOptions()
+            GlobalConfiguration.Configuration.UseSerilogLogProvider();
+            GlobalConfiguration.Configuration.UseRedisStorage(connString);
+
+            using var server = new BackgroundJobServer(new BackgroundJobServerOptions()
             {
                 WorkerCount = 1
-            }))
-            {
-                await hostBuilder.RunConsoleAsync();
-            }
+            });
+            await hostBuilder.RunConsoleAsync();
         }
     }
 }
